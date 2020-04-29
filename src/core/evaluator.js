@@ -1211,11 +1211,14 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             case OPS.rectangle:
               self.buildPath(operatorList, fn, args, parsingText);
               continue;
-            case OPS.markPoint:
-            case OPS.markPointProps:
             case OPS.beginMarkedContent:
             case OPS.beginMarkedContentProps:
+              args = operation.args;
+              continue;
             case OPS.endMarkedContent:
+              continue;
+            case OPS.markPoint:
+            case OPS.markPointProps:
             case OPS.beginCompat:
             case OPS.endCompat:
               // Ignore operators where the corresponding handlers are known to
@@ -1411,6 +1414,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           height: textChunk.height,
           transform: textChunk.transform,
           fontName: textChunk.fontName,
+          headingLevel: textChunk.headingLevel,
         };
       }
 
@@ -1478,6 +1482,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           textChunk.lastAdvanceHeight = height;
           textChunk.height += Math.abs(height);
         }
+
+        textChunk.headingLevel = stateManager.state.headingLevel;
 
         return textChunk;
       }
@@ -1643,6 +1649,22 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               break;
             case OPS.setWordSpacing:
               textState.wordSpacing = args[0];
+              break;
+            case OPS.beginMarkedContent:
+            case OPS.beginMarkedContentProps:
+              try {
+                const markedContentTag = args[0].name;
+                const headingLevelMatch = /H([1-6]+)/.exec(markedContentTag);
+                const headingLevel = parseInt(headingLevelMatch[1], 10);
+
+                textState.headingLevel = headingLevel;
+              } catch (e) {
+                // Not a heading, reset heading level to null
+                textState.headingLevel = null;
+              }
+              break;
+            case OPS.endMarkedContent:
+              textState.headingLevel = null;
               break;
             case OPS.beginText:
               flushTextContentItem();

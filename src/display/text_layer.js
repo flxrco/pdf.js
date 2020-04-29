@@ -99,6 +99,13 @@ var renderTextLayer = (function renderTextLayerClosure() {
     textDiv.style.fontSize = `${fontHeight}px`;
     textDiv.style.fontFamily = style.fontFamily;
 
+    // Set heading level if provided
+    const { headingLevel, } = geom;
+    if (headingLevel) {
+      textDiv.setAttribute('role', 'heading');
+      textDiv.setAttribute('aria-level', headingLevel);
+    }
+
     textDiv.textContent = geom.str;
     // `fontName` is only used by the FontInspector, and we only use `dataset`
     // here to make the font name available in the debugger.
