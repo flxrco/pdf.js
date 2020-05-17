@@ -30,6 +30,7 @@ import {
 import { ChunkedStream } from './chunked_stream';
 import { CipherTransformFactory } from './crypto';
 import { ColorSpace } from './colorspace';
+import MarkedContentInfo from './marked_content_info';
 
 function fetchDestination(dest) {
   return isDict(dest) ? dest.get('D') : dest;
@@ -103,6 +104,26 @@ class Catalog {
       warn('Unable to read document outline.');
     }
     return shadow(this, 'documentOutline', obj);
+  }
+
+  get isMarked() {
+    let isMarked = false;
+
+    try {
+      // trjohnst TODO:
+      // 14.7 of the spec refers to MarkInfo as Markings, was this
+      // changed and do we need to look for both?
+      isMarked = this.catDict.get('MarkInfo').get('Marked');
+    } catch (e) {
+      // If it lacks MarkInfo and the Marked dict entry then it is
+      // not marked, let it be false
+    }
+
+    return isMarked;
+  }
+
+  get structTreeRoot() {
+    return this.catDict.get('StructTreeRoot');
   }
 
   /**
@@ -2164,6 +2185,8 @@ let ObjectLoader = (function() {
 
 export {
   Catalog,
+  MarkedContentInfo,
+  NumberTree,
   ObjectLoader,
   XRef,
   FileSpec,

@@ -48,6 +48,28 @@ var renderTextLayer = (function renderTextLayerClosure() {
     return !NonWhitespaceRegexp.test(str);
   }
 
+  function isAlternativeText(geom) {
+    const {
+      role,
+      alternativeText,
+    } = geom;
+
+    return role === 'img' && !isAllWhitespace(alternativeText);
+  }
+
+  function appendAlternativeText(task, geom) {
+    var altTextDiv = document.createElement('span');
+    const { role, alternativeText, } = geom;
+    if (role) {
+      altTextDiv.setAttribute('role', role);
+    }
+    if (alternativeText) {
+      altTextDiv.setAttribute('aria-label', alternativeText);
+    }
+
+    task._container.appendChild(altTextDiv);
+  }
+
   function appendText(task, geom, styles) {
     // Initialize all used properties to keep the caches monomorphic.
     var textDiv = document.createElement('span');
@@ -100,10 +122,15 @@ var renderTextLayer = (function renderTextLayerClosure() {
     textDiv.style.fontFamily = style.fontFamily;
 
     // Set heading level if provided
-    const { headingLevel, } = geom;
-    if (headingLevel) {
-      textDiv.setAttribute('role', 'heading');
-      textDiv.setAttribute('aria-level', headingLevel);
+    const {
+      role,
+      ariaLevel,
+    } = geom;
+    if (role) {
+      textDiv.setAttribute('role', role);
+    }
+    if (ariaLevel) {
+      textDiv.setAttribute('aria-level', ariaLevel);
     }
 
     textDiv.textContent = geom.str;
@@ -125,6 +152,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
         textDivProperties.canvasWidth = geom.width * task._viewport.scale;
       }
     }
+
     task._textDivProperties.set(textDiv, textDivProperties);
     if (task._textContentStream) {
       task._layoutText(textDiv);
@@ -523,7 +551,11 @@ var renderTextLayer = (function renderTextLayerClosure() {
     _processItems(items, styleCache) {
       for (let i = 0, len = items.length; i < len; i++) {
         this._textContentItemsStr.push(items[i].str);
-        appendText(this, items[i], styleCache);
+        if (isAlternativeText(items[i])) {
+          appendAlternativeText(this, items[i]);
+        } else {
+          appendText(this, items[i], styleCache);
+        }
       }
     },
 

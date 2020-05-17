@@ -1414,7 +1414,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           height: textChunk.height,
           transform: textChunk.transform,
           fontName: textChunk.fontName,
-          headingLevel: textChunk.headingLevel,
+          role: textChunk.role,
+          ariaLevel: textChunk.ariaLevel,
         };
       }
 
@@ -1425,6 +1426,13 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             textState.fontMatrix = translated.font.fontMatrix ||
               FONT_IDENTITY_MATRIX;
           });
+      }
+
+      function buildAndFlushAlternativeTextContentItem(alternativeText) {
+        textContent.items.push({
+          role: 'img',
+          alternativeText,
+        });
       }
 
       function buildTextContentItem(chars) {
@@ -1483,7 +1491,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           textChunk.height += Math.abs(height);
         }
 
-        textChunk.headingLevel = stateManager.state.headingLevel;
+        textChunk.role = stateManager.state.role;
+        textChunk.ariaLevel = stateManager.state.ariaLevel;
 
         return textChunk;
       }
@@ -1519,6 +1528,11 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         textContentItem.str.length = 0;
       }
 
+      function clearMarkedContentAttributes() {
+        textState.role = null;
+        textState.ariaLevel = null;
+      }
+
       function enqueueChunk() {
         let length = textContent.items.length;
         if (length > 0) {
@@ -1529,6 +1543,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       }
 
       var timeSlotManager = new TimeSlotManager();
+      var pageIndex = this.pageIndex;
 
       return new Promise(function promiseBody(resolve, reject) {
         let next = function (promise) {
@@ -1652,19 +1667,36 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               break;
             case OPS.beginMarkedContent:
             case OPS.beginMarkedContentProps:
+              // Clear any previous state associated with marked content
+              clearMarkedContentAttributes();
+
               try {
                 const markedContentTag = args[0].name;
-                const headingLevelMatch = /H([1-6]+)/.exec(markedContentTag);
-                const headingLevel = parseInt(headingLevelMatch[1], 10);
+                const headingMatch = /H([1-6]+)/.exec(markedContentTag);
 
-                textState.headingLevel = headingLevel;
+                if (markedContentTag === 'Figure') {
+                  const dict = args[1];
+                  const mcid = dict.get('MCID');
+                  const markedContentInfo = dict
+                  .xref.pdfManager.pdfDocument.markedContentInfo;
+                  const markedInfoDict = markedContentInfo
+                    .getMarkedInfoDict(pageIndex, mcid);
+                  const alternativeText = markedInfoDict.get('Alt');
+
+                  buildAndFlushAlternativeTextContentItem(alternativeText);
+                } else if (headingMatch !== null) {
+                  const headingLevel = parseInt(headingMatch[1], 10);
+
+                  textState.role = 'heading';
+                  textState.ariaLevel = headingLevel;
+                }
               } catch (e) {
-                // Not a heading, reset heading level to null
-                textState.headingLevel = null;
+                // Not supported or invalid marked content
+                clearMarkedContentAttributes();
               }
               break;
             case OPS.endMarkedContent:
-              textState.headingLevel = null;
+              clearMarkedContentAttributes();
               break;
             case OPS.beginText:
               flushTextContentItem();
@@ -2808,6 +2840,8 @@ var TextState = (function TextStateClosure() {
     this.leading = 0;
     this.textHScale = 1;
     this.textRise = 0;
+    this.role = null;
+    this.ariaLevel = null;
   }
 
   TextState.prototype = {

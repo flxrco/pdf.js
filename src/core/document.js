@@ -19,7 +19,7 @@ import {
   isNum, isSpace, isString, OPS, shadow, stringToBytes, stringToPDFString, Util,
   warn
 } from '../shared/util';
-import { Catalog, ObjectLoader, XRef } from './obj';
+import { Catalog, MarkedContentInfo, ObjectLoader, XRef } from './obj';
 import { Dict, isDict, isName, isStream, Ref } from './primitives';
 import {
   getInheritableProperty, MissingDataException, XRefEntryException,
@@ -525,6 +525,7 @@ class PDFDocument {
   setup(recoveryMode) {
     this.xref.parse(recoveryMode);
     this.catalog = new Catalog(this.pdfManager, this.xref);
+    this.markedContentInfo = new MarkedContentInfo(this.catalog);
   }
 
   get numPages() {
