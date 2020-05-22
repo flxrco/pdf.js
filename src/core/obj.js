@@ -110,9 +110,6 @@ class Catalog {
     let isMarked = false;
 
     try {
-      // trjohnst TODO:
-      // 14.7 of the spec refers to MarkInfo as Markings, was this
-      // changed and do we need to look for both?
       isMarked = this.catDict.get('MarkInfo').get('Marked');
     } catch (e) {
       // If it lacks MarkInfo and the Marked dict entry then it is
